@@ -1,0 +1,438 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ライフプラン & ポートフォリオ（スタンドアロン版）</title>
+<style>
+  :root { --bg:#0f172a; --panel:#111827; --border:#3f3f46; --text:#e5e7eb; --muted:#a1a1aa; --accent:#38bdf8; }
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family: system-ui, -apple-system, Segoe UI, Roboto, Noto Sans JP, sans-serif;}
+  .container{max-width:1200px;margin:0 auto;padding:24px 16px;}
+  .header{display:flex;gap:12px;align-items:center;justify-content:space-between;margin-bottom:16px}
+  .tabs button{padding:8px 12px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--text);cursor:pointer}
+  .tabs button.active{background:var(--accent);color:#000;border-color:transparent}
+  .grid{display:grid;gap:16px}
+  @media(min-width:900px){.grid-3{grid-template-columns:2fr 1fr 1fr}.grid-2{grid-template-columns:1fr 1fr}.grid-3even{grid-template-columns:2fr 1fr 1fr}}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:16px;}
+  .row{display:flex;gap:8px;align-items:stretch}
+  .field{display:block}
+  .label{font-size:13px;color:#cbd5e1;margin:0 0 6px}
+  .input{flex:1;background:#0b1220;border:1px solid var(--border);color:var(--text);border-radius:12px;padding:10px 12px;outline:none}
+  .suffix{min-width:70px;text-align:center;background:#1f2937;border-radius:12px;padding:10px 8px;color:#cbd5e1}
+  .btn{padding:8px 12px;border-radius:12px;border:1px solid var(--border);background:transparent;color:var(--text);cursor:pointer}
+  .btn.primary{background:var(--accent);color:#000;border-color:transparent}
+  .btn.small{padding:6px 8px;font-size:12px}
+  .kpi{border:1px solid var(--border);border-radius:14px;padding:12px;background:#0b1220}
+  .kpi.highlight{border-color:var(--accent);background:#0ea5e923}
+  .muted{color:#a1a1aa}
+  .mono{font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace}
+  .list{display:flex;flex-direction:column;gap:6px}
+  summary{cursor:pointer}
+  .rowsplit{display:flex;align-items:center;justify-content:space-between;gap:12px}
+  .pill{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--border);padding:6px 8px;border-radius:999px;color:#cbd5e1}
+  .range{width:100%}
+  .allocRow{display:flex;gap:8px;align-items:center}
+  .allocName{width:120px;color:#e5e7eb;font-size:14px}
+  .sep{height:1px;background:#2a2a33;margin:12px 0}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h1 style="margin:0;font-size:22px;font-weight:600">ライフプラン & ポートフォリオ（スタンドアロン）</h1>
+    <div class="tabs">
+      <button id="tabSaving" class="active">必要額シミュ</button>
+      <button id="tabPortfolio">ポートフォリオ診断</button>
+    </div>
+  </div>
+
+  <!-- Saving Simulator -->
+  <div id="viewSaving" class="grid grid-2">
+    <div class="card">
+      <div class="row" style="flex-wrap:wrap;gap:8px 8px;margin-bottom:8px">
+        <button class="btn primary" id="btnSample">例を入力</button>
+        <button class="btn" id="btnClear">クリア</button>
+        <div style="margin-left:auto;display:flex;gap:8px">
+          <button class="btn small" data-preset="ゆとり">ゆとり</button>
+          <button class="btn small" data-preset="普通">普通</button>
+          <button class="btn small" data-preset="最低限">最低限</button>
+        </div>
+      </div>
+      <div class="grid grid-2">
+        <label class="field"><div class="label">年間手取り</div><div class="row"><input id="netAnnual" class="input" inputmode="decimal" placeholder="例: 480"/><div class="suffix">万円/年</div></div></label>
+        <label class="field"><div class="label">現在の資産額</div><div class="row"><input id="assetsNow" class="input" inputmode="decimal" placeholder="例: 950"/><div class="suffix">万円</div></div></label>
+        <label class="field"><div class="label">公的年金（年間）</div><div class="row"><input id="pensionAnnual" class="input" inputmode="decimal" placeholder="例: 170"/><div class="suffix">万円/年</div></div></label>
+        <label class="field"><div class="label">残り現役年数</div><div class="row"><input id="yearsToRetire" class="input" inputmode="decimal" placeholder="例: 35"/><div class="suffix">年</div></div></label>
+        <label class="field"><div class="label">老後年数</div><div class="row"><input id="yearsInRetirement" class="input" inputmode="decimal" placeholder="例: 25"/><div class="suffix">年</div></div></label>
+        <label class="field"><div class="label">老後生活費率</div><div class="row"><input id="retireExpenseRate" class="input" inputmode="decimal" placeholder="例: 85"/><div class="suffix">%</div></div></label>
+      </div>
+
+      <div class="sep"></div>
+      <label class="row" style="align-items:center;gap:8px"><input type="checkbox" id="useAdvanced"/><span class="muted" style="font-size:14px">利回り/インフレを考慮（高度版）</span></label>
+      <div class="row" style="align-items:center;gap:8px;margin-top:6px">
+        <span class="muted" style="font-size:12px">表示基準</span>
+        <select id="viewMode" class="input" style="width:120px">
+          <option value="real">実質</option>
+          <option value="nominal">名目</option>
+        </select>
+      </div>
+      <div id="advBox" class="grid grid-2" style="margin-top:8px;display:none">
+        <label class="field"><div class="label">期待利回り（年率）</div><div class="row"><input id="expReturnPct" class="input" inputmode="decimal" placeholder="例: 3.0"/><div class="suffix">%</div></div></label>
+        <label class="field"><div class="label">インフレ率（年率）</div><div class="row"><input id="inflationPct" class="input" inputmode="decimal" placeholder="例: 2.0"/><div class="suffix">%</div></div></label>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3 style="margin:0 0 8px;font-size:18px">結果</h3>
+      <div id="savingResult">必要な項目を入力してください。</div>
+    </div>
+  </div>
+
+  <!-- Portfolio -->
+  <div id="viewPortfolio" class="grid grid-3even" style="display:none">
+    <div class="card">
+      <div class="grid grid-2">
+        <label class="field"><div class="label">年齢</div><div class="row"><input id="age" class="input" inputmode="numeric" value="" placeholder="例: 40"/><div class="suffix">歳</div></div></label>
+        <label class="field"><div class="label">投資期間（残年数）</div><div class="row"><input id="horizon" class="input" inputmode="numeric" value="" placeholder="例: 20"/><div class="suffix">年</div></div></label>
+      </div>
+      <div class="pill" style="margin-top:8px">推奨ボラ帯（参考）：<span class="mono" id="suggVol">—%</span></div>
+      <div class="row" style="align-items:center;margin-top:8px">
+        <span class="muted" style="font-size:12px">許容ボラ上限</span>
+        <input id="riskCap" class="range" type="range" min="4" max="18" step="0.1" value="10"/>
+        <span class="mono" id="riskCapVal" style="width:48px;text-align:right">10%</span>
+      </div>
+      <div class="sep"></div>
+      <div class="grid grid-2">
+        <div>
+          <div class="label">現在配分（%）</div>
+          <div id="allocCurrent"></div>
+        </div>
+        <div>
+          <div class="label">目標配分（%）</div>
+          <div id="allocTarget"></div>
+        </div>
+      </div>
+      <div class="row" style="margin-top:8px">
+        <span class="muted" style="font-size:14px">許容乖離（±%）</span>
+        <input id="band" class="input" style="width:90px" inputmode="decimal" value="" placeholder="5"/>
+        <div style="margin-left:auto;display:flex;gap:8px">
+          <button class="btn small" data-mode="保守">保守</button>
+          <button class="btn small" data-mode="中立">中立</button>
+          <button class="btn small" data-mode="積極">積極</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3 style="margin:0 0 8px;font-size:18px">評価</h3>
+      <div class="list">
+        <div class="kpi"><div class="muted" style="font-size:12px">期待収益（年率）</div><div class="mono" id="kpiRet" style="font-size:20px">— %</div></div>
+        <div class="kpi"><div class="muted" style="font-size:12px">リスク（年率σ）</div><div class="mono" id="kpiSigma" style="font-size:20px">— %</div></div>
+        <div class="kpi"><div class="muted" style="font-size:12px">シャープレシオ</div><div class="mono" id="kpiSharpe" style="font-size:20px">—</div></div>
+      </div>
+      <details style="margin-top:8px"><summary>リスク寄与度（%）</summary><div class="list" id="rcList" style="margin-top:8px"></div></details>
+    </div>
+
+    <div class="card">
+      <h3 style="margin:0 0 8px;font-size:18px">リバランス提案</h3>
+      <div id="rebalanceBox" class="list">—</div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===== Utils =====
+const toNum = (v)=>{ if(v==null) return NaN; const n = Number(String(v).replace(/[^0-9.\-]/g,'')); return isNaN(n)?NaN:n; };
+const clamp=(v,min,max)=>Math.min(Math.max(v,min),max);
+const fmt=(v,d=2)=>!isFinite(v)?'—':Number(v).toLocaleString(undefined,{maximumFractionDigits:d});
+
+// ===== Tabs =====
+const tabSaving = document.getElementById('tabSaving');
+const tabPortfolio = document.getElementById('tabPortfolio');
+const viewSaving = document.getElementById('viewSaving');
+const viewPortfolio = document.getElementById('viewPortfolio');
+function setTab(name){
+  if(name==='saving'){ viewSaving.style.display='grid'; viewPortfolio.style.display='none'; tabSaving.classList.add('active'); tabPortfolio.classList.remove('active'); }
+  else { viewSaving.style.display='none'; viewPortfolio.style.display='grid'; tabSaving.classList.remove('active'); tabPortfolio.classList.add('active'); }
+}
+tabSaving.onclick=()=>setTab('saving');
+tabPortfolio.onclick=()=>setTab('portfolio');
+
+// ===== Saving Simulator =====
+const el = (id)=>document.getElementById(id);
+const netAnnual=el('netAnnual'), assetsNow=el('assetsNow'), pensionAnnual=el('pensionAnnual');
+const yearsToRetire=el('yearsToRetire'), yearsInRetirement=el('yearsInRetirement'), retireExpenseRate=el('retireExpenseRate');
+const useAdvanced=el('useAdvanced'), advBox=el('advBox'), expReturnPct=el('expReturnPct'), inflationPct=el('inflationPct');
+const savingResult=el('savingResult');
+const viewMode=el('viewMode');
+
+function computePlan(input){
+  const { netAnnual, assetsNow, pensionAnnual, yearsToRetire, yearsInRetirement, retireExpenseRate, useAdvanced, expReturnPct, inflationPct } = input;
+  if([netAnnual, assetsNow, pensionAnnual, yearsToRetire, yearsInRetirement, retireExpenseRate].some(x=>!isFinite(x))) return {ok:false};
+  const expenseRate = clamp(retireExpenseRate/100,0,3);
+  const annualNeedAtRetire = netAnnual * expenseRate; // 実質
+  const annualShortfall = Math.max(0, annualNeedAtRetire - pensionAnnual);
+  let rr = 0;
+  let need_at_retirePV = annualShortfall * yearsInRetirement; // 退職時価値（実質）
+  let neededCapitalNow = need_at_retirePV; // 現在価値
+  let assets_futurePV = assetsNow; // 実質FV
+  let gap_now = Math.max(0, neededCapitalNow - assetsNow);
+  let gap_at_retire = Math.max(0, need_at_retirePV - assets_futurePV);
+  const nMonths = Math.max(0, Math.round(yearsToRetire*12));
+  let monthly = yearsToRetire<=0? Infinity : gap_now / (nMonths||1);
+  let yearly = monthly * 12; let contrib_sum_nominal = monthly*nMonths; let contrib_fv_at_retire = contrib_sum_nominal;
+  if(useAdvanced){
+    const r = expReturnPct/100, iInfl = inflationPct/100; rr = (1+r)/(1+iInfl)-1;
+    need_at_retirePV = Math.abs(rr)<1e-12 ? annualShortfall*yearsInRetirement : annualShortfall*((1-Math.pow(1+rr,-yearsInRetirement))/rr);
+    const discountToNow = Math.pow(1+rr, yearsToRetire);
+    neededCapitalNow = need_at_retirePV / discountToNow;
+    assets_futurePV = assetsNow * discountToNow;
+    gap_now = Math.max(0, neededCapitalNow - assetsNow);
+    gap_at_retire = Math.max(0, need_at_retirePV - assets_futurePV);
+    const rr_m = Math.pow(1+rr,1/12)-1;
+    const denomPV = Math.abs(rr_m)<1e-12 ? nMonths : (1-Math.pow(1+rr_m,-nMonths))/rr_m;
+    monthly = denomPV<=0? Infinity : gap_now/denomPV; yearly = monthly*12;
+    const denomFV = Math.abs(rr_m)<1e-12 ? nMonths : (Math.pow(1+rr_m,nMonths)-1)/rr_m;
+    contrib_fv_at_retire = denomFV<=0?0:monthly*denomFV; contrib_sum_nominal = monthly*nMonths;
+  }
+  const savingRate = netAnnual===0?0:yearly/netAnnual; const warn = savingRate>0.3;
+  return {ok:true, annualNeedAtRetire, annualShortfall, rr, need_at_retirePV, neededCapitalNow, assets_now:assetsNow, assets_futurePV, gap_now, gap_at_retire, nMonths, monthly, yearly, contrib_sum_nominal, contrib_fv_at_retire, savingRate, warn};
+}
+
+function renderSaving(){
+  const res = computePlan({
+    netAnnual: toNum(netAnnual.value), assetsNow: toNum(assetsNow.value), pensionAnnual: toNum(pensionAnnual.value),
+    yearsToRetire: toNum(yearsToRetire.value), yearsInRetirement: toNum(yearsInRetirement.value), retireExpenseRate: toNum(retireExpenseRate.value),
+    useAdvanced: useAdvanced.checked, expReturnPct: toNum(expReturnPct.value), inflationPct: toNum(inflationPct.value)
+  });
+  if(!res.ok){ savingResult.textContent='必要な項目を入力してください。'; return; }
+
+  // 表示モード
+  const mode = viewMode ? viewMode.value : 'real';
+  const T = toNum(yearsToRetire.value);
+  const r = toNum(expReturnPct.value)/100;
+  const iInfl = toNum(inflationPct.value)/100;
+
+  // 既定は実質表示
+  let need_at_retire = res.need_at_retirePV;
+  let gap_at_retire = res.gap_at_retire;
+  let monthly = res.monthly;
+  let yearly = res.yearly;
+
+  // 名目表示に切替（高度版ONかつ値が妥当なときのみ）
+  if(mode==='nominal' && useAdvanced.checked && isFinite(r) && isFinite(iInfl) && isFinite(T)){
+    const need_nom = res.need_at_retirePV * Math.pow(1 + iInfl, T); // 退職時点の名目必要額
+    const assets_nom = res.assets_futurePV * Math.pow(1 + iInfl, T); // = 現在資産*(1+r)^T
+    const needNow_nom = need_nom / Math.pow(1 + r, T);              // 名目割引での現在価値
+    const gap_now_nom = Math.max(0, needNow_nom - res.assets_now);
+    const r_m = Math.pow(1 + r, 1/12) - 1;
+    const nMonths = res.nMonths;
+    const denomPV_nom = Math.abs(r_m) < 1e-12 ? nMonths : (1 - Math.pow(1 + r_m, -nMonths)) / r_m;
+    const monthly_nom = denomPV_nom <= 0 ? Infinity : gap_now_nom / denomPV_nom;
+
+    need_at_retire = need_nom;
+    gap_at_retire  = Math.max(0, need_nom - assets_nom);
+    monthly = monthly_nom;
+    yearly  = monthly_nom * 12;
+  }
+
+  savingResult.innerHTML = `
+    <div class="list">
+      <div class="kpi highlight"><div class="muted" style="font-size:12px">必要な積立（月額）</div><div class="mono" style="font-size:20px">${fmt(monthly)} 万円/月</div></div>
+      <div class="kpi"><div class="muted" style="font-size:12px">退職時の目標残高（退職時価値）</div><div class="mono" style="font-size:20px">${fmt(need_at_retire)} 万円</div></div>
+      <div class="kpi"><div class="muted" style="font-size:12px">退職時までに積立で必要な額（退職時価値）</div><div class="mono" style="font-size:20px">${fmt(gap_at_retire)} 万円</div></div>
+    </div>
+    <details style="margin-top:8px"><summary>詳細を表示</summary>
+      <div class="list" style="margin-top:8px">
+        <div class="rowsplit"><span class="muted" style="font-size:13px">退職初年度の生活費（実質）</span><span class="mono" style="font-size:13px">${fmt(res.annualNeedAtRetire)} 万円/年</span></div>
+        <div class="rowsplit"><span class="muted" style="font-size:13px">年金不足（実質）</span><span class="mono" style="font-size:13px">${fmt(res.annualShortfall)} 万円/年</span></div>
+        ${isFinite(res.rr)?`<div class="rowsplit"><span class="muted" style="font-size:13px">実質利回り（年率）</span><span class="mono" style="font-size:13px">${fmt(res.rr*100,2)} %</span></div>`:''}
+        <div class="rowsplit"><span class="muted" style="font-size:13px">現在資産（現価）</span><span class="mono" style="font-size:13px">${fmt(res.assets_now)} 万円</span></div>
+        <div class="rowsplit"><span class="muted" style="font-size:13px">現在資産の退職時価値（実質）</span><span class="mono" style="font-size:13px">${fmt(res.assets_futurePV)} 万円</span></div>
+        <div class="rowsplit"><span class="muted" style="font-size:13px">総必要額（現在価値・実質）</span><span class="mono" style="font-size:13px">${fmt(res.neededCapitalNow)} 万円</span></div>
+        <div class="rowsplit"><span class="muted" style="font-size:13px">追加必要額（現在価値・実質）</span><span class="mono" style="font-size:13px">${fmt(res.gap_now)} 万円</span></div>
+        <div class="rowsplit"><span class="muted" style="font-size:13px">拠出合計（単純合計）</span><span class="mono" style="font-size:13px">${fmt(res.contrib_sum_nominal)} 万円</span></div>
+        <div class="rowsplit"><span class="muted" style="font-size:13px">必要な積立（年間）</span><span class="mono" style="font-size:13px">${fmt(yearly)} 万円/年</span></div>
+        <div class="rowsplit"><span class="muted" style="font-size:13px">必要貯蓄率（手取り比）</span><span class="mono" style="font-size:13px">${fmt((yearly)/(toNum(netAnnual.value)||1)*100,1)} %</span></div>
+        ${res.warn?`<div style="font-size:12px;color:#fde68a;background:#78350f33;border:1px solid #92400e;border-radius:8px;padding:8px">ガイド：貯蓄率が30%を超えています。条件の見直しが必要です。</div>`:''}
+      </div>
+    </details>
+  `;
+}
+
+['input','change'].forEach(evt=>{
+  [netAnnual,assetsNow,pensionAnnual,yearsToRetire,yearsInRetirement,retireExpenseRate,expReturnPct,inflationPct].forEach(x=>x.addEventListener(evt,renderSaving));
+});
+useAdvanced.addEventListener('change',()=>{ advBox.style.display=useAdvanced.checked?'grid':'none'; renderSaving(); });
+if(viewMode){ ['change','input'].forEach(evt=>viewMode.addEventListener(evt, renderSaving)); }
+el('btnSample').onclick=()=>{ netAnnual.value='480'; assetsNow.value='950'; pensionAnnual.value='170'; yearsToRetire.value='35'; yearsInRetirement.value='25'; retireExpenseRate.value='85'; useAdvanced.checked=true; advBox.style.display='grid'; expReturnPct.value='3.0'; inflationPct.value='2.0'; renderSaving(); };
+el('btnClear').onclick=()=>{ [netAnnual,assetsNow,pensionAnnual,yearsToRetire,yearsInRetirement,retireExpenseRate,expReturnPct,inflationPct].forEach(x=>x.value=''); useAdvanced.checked=false; advBox.style.display='none'; renderSaving(); };
+document.querySelectorAll('[data-preset]').forEach(btn=>btn.addEventListener('click',()=>{
+  const t=btn.getAttribute('data-preset'); if(t==='ゆとり') retireExpenseRate.value='95'; if(t==='普通') retireExpenseRate.value='85'; if(t==='最低限') retireExpenseRate.value='70'; renderSaving();
+}));
+renderSaving();
+
+// ===== Portfolio =====
+const ASSETS = [
+  { key:'日本株', mu:5.0, vol:18.0 },
+  { key:'米国株', mu:6.2, vol:16.0 },
+  { key:'欧州株', mu:5.5, vol:17.0 },
+  { key:'国内債券', mu:1.2, vol:4.0 },
+  { key:'先進国債', mu:2.0, vol:6.0 },
+  { key:'REIT', mu:4.5, vol:15.0 },
+  { key:'金', mu:3.0, vol:14.0 },
+  { key:'現金', mu:0.1, vol:0.5 },
+];
+const CORR = [
+  [1.00,0.65,0.60,0.20,0.25,0.40,0.10,0.00],
+  [0.65,1.00,0.75,0.15,0.30,0.45,0.15,0.00],
+  [0.60,0.75,1.00,0.15,0.30,0.40,0.15,0.00],
+  [0.20,0.15,0.15,1.00,0.60,0.20,0.05,0.05],
+  [0.25,0.30,0.30,0.60,1.00,0.25,0.05,0.05],
+  [0.40,0.45,0.40,0.20,0.25,1.00,0.10,0.05],
+  [0.10,0.15,0.15,0.05,0.05,0.10,1.00,0.00],
+  [0.00,0.00,0.00,0.05,0.05,0.05,0.00,1.00],
+];
+
+const templateAgg = [15,40,18,10,7,5,3,2];
+const templateNeu = [20,32,15,15,10,5,2,1];
+const templateCon = [25,25,10,20,15,3,1,1];
+
+let current = [40,20,10,15,10,3,1,1];
+let target = [...templateNeu];
+
+// UI parts
+const allocCurrent = el('allocCurrent');
+const allocTarget = el('allocTarget');
+const rcList = el('rcList');
+const bandInput = el('band');
+const rebalanceBox = el('rebalanceBox');
+const kpiRet = el('kpiRet'), kpiSigma=el('kpiSigma'), kpiSharpe=el('kpiSharpe');
+const ageInput=el('age'), horizonInput=el('horizon');
+const riskCap=el('riskCap'), riskCapVal=el('riskCapVal'), suggVol=el('suggVol');
+
+function suggestedRiskLevel(age, horizonY){
+  const base=10; const adj=Math.max(-4, Math.min(4, (35 - age/2)*0.2)); const hz=Math.min(3, Math.max(-3, (horizonY-10)*0.15));
+  return clamp(base+adj+hz,4,18);
+}
+function mulVecMat(v, m){ const n=v.length, out=new Array(n).fill(0); for(let i=0;i<n;i++){ let s=0; for(let j=0;j<n;j++) s+=v[j]*m[j][i]; out[i]=s; } return out; }
+function portfolioStats(w, mu, vol, corr){
+  const ret = w.reduce((s,wi,i)=>s+wi*mu[i],0);
+  const n=w.length, cov=Array.from({length:n},()=>Array(n).fill(0));
+  for(let i=0;i<n;i++) for(let j=0;j<n;j++) cov[i][j]=(vol[i]/100)*(vol[j]/100)*corr[i][j];
+  let variance=0; for(let i=0;i<n;i++) for(let j=0;j<n;j++) variance += w[i]*cov[i][j]*w[j];
+  const sigma=Math.sqrt(Math.max(variance,0))*100; const rf=0; const sharpe=sigma===0?0:(ret-rf)/sigma;
+  const cw=mulVecMat(w,cov); const rc=variance===0?w.map(()=>0):w.map((wi,i)=>(wi*cw[i])/variance);
+  return {ret,sigma,sharpe,rc};
+}
+function rebalancePlan(curr, tgt, bandPct=5){
+  const acts=[]; for(let i=0;i<curr.length;i++){ const low=Math.max(0, tgt[i]-bandPct), high=Math.min(100, tgt[i]+bandPct); if(curr[i]<low) acts.push({asset:ASSETS[i].key, action:'buy', amount:Math.min(low-curr[i],100)}); if(curr[i]>high) acts.push({asset:ASSETS[i].key, action:'sell', amount:Math.min(curr[i]-high,100)}); } return acts;
+}
+function renderAllocEditor(container, arr, onChange){
+  container.innerHTML='';
+  const sumBox=document.createElement('div');
+  sumBox.setAttribute('data-sum','1');
+  const updateSum=()=>{
+    const s = arr.reduce((x,y)=>x+(isFinite(y)?y:0),0);
+    sumBox.className='rowsplit';
+    sumBox.innerHTML=`<div class="muted">合計：<span class=\"mono\">${fmt(s,1)}%</span> ${s===100?'':'（100%に正規化してください）'}</div>`;
+  };
+  ASSETS.forEach((a,i)=>{
+    const row=document.createElement('div'); row.className='allocRow';
+    const name=document.createElement('div'); name.className='allocName'; name.textContent=a.key; row.appendChild(name);
+    const input=document.createElement('input'); input.type='number'; input.className='input'; input.step='0.1'; input.min='0'; input.max='100'; input.value=arr[i];
+    input.addEventListener('input',()=>{
+      const val=input.value; const num=Number(val);
+      if(!Number.isNaN(num)) { arr[i]=num; onChange([...arr], /*final*/false); }
+      updateSum();
+    });
+    input.addEventListener('change',()=>{
+      const num=clamp(toNum(input.value),0,100);
+      arr[i]=isFinite(num)?num:0; input.value=arr[i];
+      onChange([...arr], /*final*/true);
+      updateSum();
+    });
+    row.appendChild(input);
+    const pct=document.createElement('div'); pct.textContent='%'; pct.className='muted'; row.appendChild(pct);
+    container.appendChild(row);
+  });
+  // フッター
+  updateSum();
+  const btnWrap=document.createElement('div'); btnWrap.className='rowsplit';
+  const normBtn=document.createElement('button'); normBtn.className='btn small'; normBtn.textContent='正規化(100%)';
+  normBtn.onclick=()=>{ const s = arr.reduce((x,y)=>x+(isFinite(y)?y:0),0)||1; const next=arr.map(v=>Math.round((v/s*100)*10)/10); onChange(next, /*final*/true); };
+  btnWrap.appendChild(sumBox); btnWrap.appendChild(normBtn); container.appendChild(btnWrap);
+}
+
+function refreshEditor(container, arr){
+  // 入力欄の値を配列に同期（再マウントせずに見た目だけ更新）
+  const inputs = container.querySelectorAll('input[type="number"]');
+  inputs.forEach((inp, idx)=>{ if(typeof arr[idx]!=="undefined") inp.value = String(arr[idx]); });
+  const sumEl = container.querySelector('[data-sum]');
+  if(sumEl){
+    const s = arr.reduce((x,y)=>x+(isFinite(y)?y:0),0);
+    sumEl.innerHTML = `<div class="muted">合計：<span class=\"mono\">${fmt(s,1)}%</span> ${s===100?'':'（100%に正規化してください）'}</div>`;
+  }
+}
+
+let editorsMounted=false;
+function updateStatsOnly(){
+  const mu=ASSETS.map(a=>a.mu), vol=ASSETS.map(a=>a.vol);
+  const stats=portfolioStats(current.map(w=>w/100), mu, vol, CORR);
+  kpiRet.textContent = fmt(stats.ret,1)+ ' %';
+  kpiSigma.textContent = fmt(stats.sigma,1)+ ' %';
+  kpiSharpe.textContent = fmt(stats.sharpe,2);
+  rcList.innerHTML='';
+  ASSETS.forEach((a,i)=>{
+    const d=document.createElement('div'); d.className='rowsplit';
+    d.innerHTML=`<span class="muted" style="font-size:13px">${a.key}</span><span class="mono" style="font-size:13px">${fmt(stats.rc[i]*100,1)} %</span>`;
+    rcList.appendChild(d);
+  });
+  const bandVal = toNum(bandInput.value); const band = isFinite(bandVal) ? bandVal : 5; const acts=rebalancePlan(current, target, band);
+  if(acts.length===0){ rebalanceBox.textContent='提案はありません（許容乖離内）。'; }
+  else { rebalanceBox.innerHTML=''; acts.forEach(ac=>{ const d=document.createElement('div'); d.className='rowsplit'; d.innerHTML=`<span>${ac.asset}</span><span class="mono" style="color:${ac.action==='buy'?'#86efac':'#fda4af'}">${ac.action==='buy'?'買い':'売り'} ${fmt(ac.amount,1)}%</span>`; rebalanceBox.appendChild(d); }); }
+}
+function mountEditors(){
+  renderAllocEditor(allocCurrent, current, (next)=>{ current=[...next]; updateStatsOnly(); });
+  renderAllocEditor(allocTarget, target, (next)=>{ target=[...next]; updateStatsOnly(); });
+  editorsMounted=true;
+}
+function renderPortfolio(){
+  if(!editorsMounted) mountEditors();
+  // 目標テンプレ変更時にも、見た目のエディタ値を即時反映
+  refreshEditor(allocTarget, target);
+  updateStatsOnly();
+}
+// 初期描画
+renderPortfolio();
+
+// 推奨ボラ（参考）
+function updateSugg(){ const v=suggestedRiskLevel(toNum(ageInput.value)||0, toNum(horizonInput.value)||0); suggVol.textContent = fmt(v,1)+'%'; }
+updateSugg();
+['input','change'].forEach(evt=>{ ageInput.addEventListener(evt,updateSugg); horizonInput.addEventListener(evt,updateSugg); bandInput.addEventListener(evt,()=>{ /* fallback handled in updateStatsOnly */ updateStatsOnly(); }); });
+
+// 許容ボラ（参考表示のみ）
+riskCap.addEventListener('input',()=>{ riskCapVal.textContent = fmt(toNum(riskCap.value),1)+'%'; });
+riskCapVal.textContent = fmt(toNum(riskCap.value),1)+'%';
+
+// テンプレ（冪等：毎回固定値へ上書き）
+document.querySelectorAll('[data-mode]').forEach(btn=>btn.addEventListener('click',()=>{
+  const m=btn.getAttribute('data-mode');
+  if(m==='保守') target=[...templateCon]; else if(m==='積極') target=[...templateAgg]; else target=[...templateNeu];
+  renderPortfolio();
+}));
+
+// ===== Self tests (console) =====
+(function(){
+  try{
+    const t1 = computePlan({ netAnnual:480, assetsNow:950, pensionAnnual:170, yearsToRetire:35, yearsInRetirement:25, retireExpenseRate:85, useAdvanced:true, expReturnPct:3, inflationPct:2 });
+    console.log('[TEST] computePlan ok:', t1 && t1.ok===true);
+    const one = [1,0,0,0,0,0,0,0];
+    const s1 = (function(){ const mu=ASSETS.map(a=>a.mu), vol=ASSETS.map(a=>a.vol); return portfolioStats(one, mu, vol, CORR); })();
+    console.log('[TEST] PF sigma≈JPN vol:', Math.abs(s1.sigma-ASSETS[0].vol) < 0.6);
+  }catch(e){ console.error('[TEST] failed', e); }
+})();
+// ===== END =====
+</script>
+</body>
+</html>
